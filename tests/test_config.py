@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import pytest
 
 from comfy_gpu_offload.config import ConfigError, RunpodConfig, load_runpod_config
@@ -14,7 +12,7 @@ def test_load_runpod_config_happy_path() -> None:
 
     assert cfg.api_key == "dummy-key"
     assert cfg.endpoint_id == "endpoint-123"
-    assert cfg.base_url == "https://api.runpod.io"
+    assert cfg.base_url == "https://api.runpod.ai"
     assert cfg.request_timeout_seconds == 30.0
     assert cfg.verify_tls is True
     assert cfg.poll_interval_seconds == 3.0
@@ -63,4 +61,3 @@ def test_load_runpod_config_missing_required(env: dict[str, str], expected_messa
 def test_load_runpod_config_invalid_values(bad_env: dict[str, str]) -> None:
     with pytest.raises(ConfigError):
         load_runpod_config(bad_env)
-

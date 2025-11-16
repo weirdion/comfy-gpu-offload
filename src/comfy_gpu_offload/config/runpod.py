@@ -1,7 +1,5 @@
 """RunPod configuration models and loaders."""
 
-from __future__ import annotations
-
 import os
 from dataclasses import dataclass
 from typing import Mapping
@@ -44,7 +42,7 @@ def _require(value: str | None, *, name: str) -> str:
 class RunpodConfig:
     api_key: str
     endpoint_id: str
-    base_url: str = "https://api.runpod.io"
+    base_url: str = "https://api.runpod.ai"
     request_timeout_seconds: float = 30.0
     verify_tls: bool = True
     poll_interval_seconds: float = 3.0
@@ -104,4 +102,3 @@ def load_runpod_config(env: Mapping[str, str] | None = None) -> RunpodConfig:
         poll_interval_seconds=poll_interval_seconds,
         max_poll_duration_seconds=max_poll_duration_seconds,
     )
-
