@@ -3,7 +3,13 @@ from pathlib import Path
 import pytest
 from PIL import Image
 
-from comfy_gpu_offload.io import base64_to_image, image_to_base64, new_temp_dir, remove_path_safely, write_bytes_secure
+from comfy_gpu_offload.io import (
+    base64_to_image,
+    image_to_base64,
+    new_temp_dir,
+    remove_path_safely,
+    write_bytes_secure,
+)
 
 
 def test_new_temp_dir_and_permissions() -> None:
@@ -35,3 +41,4 @@ def test_image_base64_round_trip() -> None:
 
     assert decoded.size == (2, 2)
     assert decoded.mode == "RGB"
+

@@ -2,7 +2,7 @@
 
 import time
 from dataclasses import dataclass
-from typing import Any, Mapping
+from typing import Any, Callable, Mapping
 
 import requests
 from requests import Response
@@ -128,6 +128,7 @@ class RunpodClient:
                 url=url,
                 headers=headers,
                 timeout=self._config.request_timeout_seconds,
+                verify=self._config.verify_tls,
                 **kwargs,
             )
         except RequestException as exc:

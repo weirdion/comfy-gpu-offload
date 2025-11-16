@@ -38,6 +38,12 @@ def _require(value: str | None, *, name: str) -> str:
     return value
 
 
+def _validate_base_url(url: str) -> str:
+    if not url.startswith("https://"):
+        raise ConfigError("RUNPOD_BASE_URL must use https")
+    return url.rstrip("/")
+
+
 @dataclass(frozen=True, slots=True)
 class RunpodConfig:
     api_key: str
@@ -73,6 +79,7 @@ def load_runpod_config(env: Mapping[str, str] | None = None) -> RunpodConfig:
     )
 
     base_url = source_env.get(keys["base_url"], RunpodConfig.base_url)
+    base_url = _validate_base_url(base_url)
     request_timeout_seconds = _parse_float(
         source_env.get(keys["request_timeout_seconds"]),
         default=RunpodConfig.request_timeout_seconds,

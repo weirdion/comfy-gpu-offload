@@ -61,3 +61,13 @@ def test_load_runpod_config_missing_required(env: dict[str, str], expected_messa
 def test_load_runpod_config_invalid_values(bad_env: dict[str, str]) -> None:
     with pytest.raises(ConfigError):
         load_runpod_config(bad_env)
+
+
+def test_load_runpod_config_requires_https() -> None:
+    env = {
+        "RUNPOD_API_KEY": "k",
+        "RUNPOD_ENDPOINT_ID": "e",
+        "RUNPOD_BASE_URL": "http://insecure.example",
+    }
+    with pytest.raises(ConfigError):
+        load_runpod_config(env)

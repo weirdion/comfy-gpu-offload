@@ -28,8 +28,8 @@ class FakeSession:
         self.responses = list(responses)
         self.calls: list[dict[str, Any]] = []
 
-    def request(self, method: str, url: str, headers: dict[str, str], timeout: float, **kwargs: Any) -> FakeResponse:
-        self.calls.append({"method": method, "url": url, "headers": headers, "kwargs": kwargs})
+    def request(self, method: str, url: str, headers: dict[str, str], timeout: float, verify: bool, **kwargs: Any) -> FakeResponse:
+        self.calls.append({"method": method, "url": url, "headers": headers, "timeout": timeout, "verify": verify, "kwargs": kwargs})
         if not self.responses:
             raise AssertionError("No more fake responses available")
         return self.responses.pop(0)
@@ -48,6 +48,7 @@ def test_submit_job_returns_id_and_sets_auth_header() -> None:
 
     assert job_id == "job-123"
     assert session.calls[0]["headers"]["Authorization"].startswith("Bearer ")
+    assert session.calls[0]["verify"] is True
 
 
 def test_get_job_status_parses_output() -> None:
