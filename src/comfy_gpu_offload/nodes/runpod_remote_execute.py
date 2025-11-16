@@ -13,6 +13,7 @@ from comfy_gpu_offload.workflow import (
     WorkflowLoadError,
     build_run_payload,
     ensure_payload_size,
+    fetch_workflow_from_url,
     load_workflow_from_path,
     validate_workflow_schema,
 )
@@ -58,6 +59,14 @@ class RunPodRemoteExecute:
                 ),
             },
             "optional": {
+                "workflow_url": (
+                    "STRING",
+                    {
+                        "multiline": False,
+                        "default": "",
+                        "placeholder": "https://localhost:8188/api/workflow (optional, overrides path/json)",
+                    },
+                ),
                 "max_payload_bytes": (
                     "INT",
                     {
@@ -93,11 +102,14 @@ class RunPodRemoteExecute:
         timeout_seconds: float | None = None,
         workflow_path: str = "",
         max_payload_bytes: int | None = 9_500_000,
+        workflow_url: str = "",
     ) -> tuple[str, str, str]:
         if not use_runpod:
             return ("disabled", "", "{}")
 
-        if workflow_path.strip():
+        if workflow_url.strip():
+            workflow = self._load_workflow_from_url(workflow_url.strip(), max_payload_bytes)
+        elif workflow_path.strip():
             workflow = self._load_workflow_from_path(workflow_path.strip())
         else:
             workflow = self._parse_json_mapping(workflow_json, "workflow_json")
@@ -153,6 +165,20 @@ class RunPodRemoteExecute:
         if max_bytes is not None:
             ensure_payload_size({"workflow": workflow}, max_bytes=max_bytes)
         return workflow
+
+    def _load_workflow_from_url(
+        self, url: str, max_payload_bytes: int | None = None
+    ) -> dict[str, Any]:
+        try:
+            workflow = fetch_workflow_from_url(
+                url,
+                timeout_seconds=10.0,
+                verify_tls=True,
+                max_bytes=max_payload_bytes or self.max_payload_bytes or 9_500_000,
+            )
+        except WorkflowLoadError as exc:
+            raise RuntimeError(f"Failed to fetch workflow from URL: {exc}") from exc
+        return dict(workflow)
 
     @staticmethod
     def _parse_json_mapping(value: str, field: str, *, allow_empty: bool = False) -> dict[str, Any]:
