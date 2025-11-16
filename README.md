@@ -13,12 +13,11 @@ make setup        # creates/updates .venv with uv and installs deps
 source .venv/bin/activate
 ```
 
-Run checks:
+Common tasks (via Makefile):
 
 ```bash
+make fix          # format + autofix lint
 make checks       # lint + format-check + typecheck + tests + bandit
-# optional (requires snyk CLI + SNYK_TOKEN):
-# make snyk
 ```
 
 ## Testing in ComfyUI
