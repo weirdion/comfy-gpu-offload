@@ -1,16 +1,15 @@
 import json
-from typing import Any
+from typing import Any, cast
 
 import pytest
 
-from comfy_gpu_offload.api import RunpodStatus
-from comfy_gpu_offload.config import RunpodConfig
+from comfy_gpu_offload.api import RunpodClient, RunpodStatus
 from comfy_gpu_offload.nodes.runpod_remote_execute import RunPodRemoteExecute
 
 
 class FakeClient:
     def __init__(self) -> None:
-        self.submitted_payload: Any | None = None
+        self.submitted_payload: dict[str, Any] | None = None
         self.job_id = "job-xyz"
         self.status = RunpodStatus.COMPLETED
         self.output = {"ok": True}
@@ -24,6 +23,7 @@ class FakeClient:
             def __init__(self, outer: FakeClient) -> None:
                 self.status = outer.status
                 self.output = outer.output
+
         return Status(self)
 
 
@@ -31,7 +31,10 @@ def test_node_happy_path(monkeypatch: pytest.MonkeyPatch) -> None:
     fake_client = FakeClient()
     node = RunPodRemoteExecute()
 
-    node.client_factory = lambda _config: fake_client  # type: ignore[assignment]
+    def factory(_config: Any) -> RunpodClient:
+        return cast(RunpodClient, fake_client)
+
+    node.client_factory = factory
     monkeypatch.setenv("RUNPOD_API_KEY", "k")
     monkeypatch.setenv("RUNPOD_ENDPOINT_ID", "e")
 
@@ -45,6 +48,7 @@ def test_node_happy_path(monkeypatch: pytest.MonkeyPatch) -> None:
 
     assert status == RunpodStatus.COMPLETED
     assert job_id == fake_client.job_id
+    assert fake_client.submitted_payload is not None
     assert json.loads(output_json) == fake_client.output
     assert fake_client.submitted_payload["workflow"] == {"nodes": []}
 
@@ -62,3 +66,25 @@ def test_node_validates_workflow_json() -> None:
     with pytest.raises(RuntimeError):
         node.execute(workflow_json="not-json", use_runpod=True)
 
+
+def test_node_requires_config(monkeypatch: pytest.MonkeyPatch) -> None:
+    node = RunPodRemoteExecute()
+    monkeypatch.delenv("RUNPOD_API_KEY", raising=False)
+    monkeypatch.delenv("RUNPOD_ENDPOINT_ID", raising=False)
+
+    with pytest.raises(RuntimeError):
+        node.execute(workflow_json='{"nodes":[]}', use_runpod=True)
+
+
+def test_node_validates_images_json(monkeypatch: pytest.MonkeyPatch) -> None:
+    node = RunPodRemoteExecute()
+    monkeypatch.setenv("RUNPOD_API_KEY", "k")
+    monkeypatch.setenv("RUNPOD_ENDPOINT_ID", "e")
+
+    def factory(_config: Any) -> RunpodClient:
+        return cast(RunpodClient, FakeClient())
+
+    node.client_factory = factory
+
+    with pytest.raises(RuntimeError):
+        node.execute(workflow_json='{"nodes":[]}', use_runpod=True, images_json='{"not":"array"}')

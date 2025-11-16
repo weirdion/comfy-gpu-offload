@@ -9,21 +9,16 @@ Project scaffolding is in place (Python 3.13, uv, src/ layout, basic tooling con
 ## Developing
 
 ```bash
-# create env (uv)
-uv venv
+make setup        # creates/updates .venv with uv and installs deps
 source .venv/bin/activate
-
-# install project + dev tools
-uv pip install -e .[dev]
 ```
 
 Run checks:
 
 ```bash
-ruff check .
-ruff format .
-mypy .
-pytest
+make checks       # lint + format-check + typecheck + tests + bandit
+# optional (requires snyk CLI + SNYK_TOKEN):
+# make snyk
 ```
 
 ## Testing in ComfyUI
@@ -35,4 +30,4 @@ Clone or symlink this repo into `ComfyUI/custom_nodes/` to test nodes once imple
 - No secrets committed; use environment variables (e.g., `RUNPOD_API_KEY`).
 - TLS verification and request timeouts are required for all HTTP calls.
 - Avoid logging sensitive payloads or prompts.
-
+- RunPod base URL must be HTTPS.

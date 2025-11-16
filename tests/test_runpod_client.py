@@ -1,6 +1,7 @@
-from typing import Any
+from typing import Any, cast
 
 import pytest
+import requests
 
 from comfy_gpu_offload.api import (
     RunpodApiError,
@@ -28,8 +29,25 @@ class FakeSession:
         self.responses = list(responses)
         self.calls: list[dict[str, Any]] = []
 
-    def request(self, method: str, url: str, headers: dict[str, str], timeout: float, verify: bool, **kwargs: Any) -> FakeResponse:
-        self.calls.append({"method": method, "url": url, "headers": headers, "timeout": timeout, "verify": verify, "kwargs": kwargs})
+    def request(
+        self,
+        method: str,
+        url: str,
+        headers: dict[str, str],
+        timeout: float,
+        verify: bool,
+        **kwargs: Any,
+    ) -> FakeResponse:
+        self.calls.append(
+            {
+                "method": method,
+                "url": url,
+                "headers": headers,
+                "timeout": timeout,
+                "verify": verify,
+                "kwargs": kwargs,
+            }
+        )
         if not self.responses:
             raise AssertionError("No more fake responses available")
         return self.responses.pop(0)
@@ -38,11 +56,13 @@ class FakeSession:
 def make_client(responses: list[FakeResponse]) -> tuple[RunpodClient, FakeSession]:
     session = FakeSession(responses)
     cfg = RunpodConfig(api_key="k", endpoint_id="e")
-    return RunpodClient(cfg, session=session), session
+    return RunpodClient(cfg, session=cast(requests.Session, session)), session
 
 
 def test_submit_job_returns_id_and_sets_auth_header() -> None:
-    client, session = make_client([FakeResponse(200, {"id": "job-123", "status": RunpodStatus.IN_QUEUE})])
+    client, session = make_client(
+        [FakeResponse(200, {"id": "job-123", "status": RunpodStatus.IN_QUEUE})]
+    )
 
     job_id = client.submit_job({"workflow": {"foo": "bar"}})
 
@@ -53,7 +73,12 @@ def test_submit_job_returns_id_and_sets_auth_header() -> None:
 
 def test_get_job_status_parses_output() -> None:
     client, _ = make_client(
-        [FakeResponse(200, {"id": "job-123", "status": RunpodStatus.COMPLETED, "output": {"ok": True}})]
+        [
+            FakeResponse(
+                200,
+                {"id": "job-123", "status": RunpodStatus.COMPLETED, "output": {"ok": True}},
+            )
+        ]
     )
 
     status = client.get_job_status("job-123")
@@ -67,7 +92,10 @@ def test_poll_job_completes() -> None:
     client, _ = make_client(
         [
             FakeResponse(200, {"id": "job-123", "status": RunpodStatus.IN_PROGRESS}),
-            FakeResponse(200, {"id": "job-123", "status": RunpodStatus.COMPLETED, "output": {"result": "ok"}}),
+            FakeResponse(
+                200,
+                {"id": "job-123", "status": RunpodStatus.COMPLETED, "output": {"result": "ok"}},
+            ),
         ]
     )
 
@@ -78,16 +106,23 @@ def test_poll_job_completes() -> None:
 
 
 def test_poll_job_raises_on_failure_status() -> None:
-    client, _ = make_client([FakeResponse(200, {"id": "job-123", "status": RunpodStatus.FAILED, "error": "boom"})])
+    client, _ = make_client(
+        [FakeResponse(200, {"id": "job-123", "status": RunpodStatus.FAILED, "error": "boom"})]
+    )
 
     with pytest.raises(RunpodJobError):
         client.poll_job("job-123", poll_interval_seconds=0.0, timeout_seconds=1.0)
 
 
 def test_poll_job_times_out(monkeypatch: pytest.MonkeyPatch) -> None:
-    client, _ = make_client([FakeResponse(200, {"id": "job-123", "status": RunpodStatus.IN_PROGRESS})])
+    client, _ = make_client(
+        [
+            FakeResponse(200, {"id": "job-123", "status": RunpodStatus.IN_PROGRESS}),
+            FakeResponse(200, {"id": "job-123", "status": RunpodStatus.IN_PROGRESS}),
+        ]
+    )
 
-    times = iter([0.0, 0.1, 1.0])
+    times = iter([0.0, 0.4, 1.0])
 
     def fake_monotonic() -> float:
         return next(times)

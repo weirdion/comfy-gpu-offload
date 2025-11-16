@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, cast
 
 import pytest
 
@@ -29,21 +29,29 @@ def test_build_run_payload_happy_path() -> None:
 )
 def test_build_run_payload_invalid_workflow(workflow: Any) -> None:
     with pytest.raises(BuildPayloadError):
-        build_run_payload(workflow=workflow)  # type: ignore[arg-type]
+        build_run_payload(workflow=workflow)
 
 
 def test_build_run_payload_rejects_bad_images() -> None:
     with pytest.raises(BuildPayloadError):
-        build_run_payload(workflow={"nodes": []}, images=[{"name": "", "image": "dGVzdA=="}])  # type: ignore[list-item]
+        build_run_payload(
+            workflow={"nodes": []},
+            images=[cast(Any, {"name": "", "image": "dGVzdA==", "type": "base64"})],
+        )
 
     with pytest.raises(BuildPayloadError):
-        build_run_payload(workflow={"nodes": []}, images=[{"name": "x", "image": ""}])  # type: ignore[list-item]
+        build_run_payload(
+            workflow={"nodes": []},
+            images=[cast(Any, {"name": "x", "image": "", "type": "base64"})],
+        )
 
     with pytest.raises(BuildPayloadError):
-        build_run_payload(workflow={"nodes": []}, images=[{"name": "x", "image": "ok", "type": 123}])  # type: ignore[list-item]
+        build_run_payload(
+            workflow={"nodes": []},
+            images=[cast(Any, {"name": "x", "image": "ok", "type": 123})],
+        )
 
 
 def test_build_run_payload_rejects_bad_params() -> None:
     with pytest.raises(BuildPayloadError):
-        build_run_payload(workflow={"nodes": []}, params="nope")  # type: ignore[arg-type]
-
+        build_run_payload(workflow={"nodes": []}, params=cast(Any, "nope"))

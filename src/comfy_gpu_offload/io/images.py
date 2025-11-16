@@ -2,7 +2,6 @@
 
 import base64
 import io
-from typing import Any
 
 from PIL import Image
 
@@ -21,4 +20,3 @@ def base64_to_image(data: str) -> Image.Image:
     image = Image.open(buffer)
     image.load()  # Force load before buffer goes out of scope.
     return image
-

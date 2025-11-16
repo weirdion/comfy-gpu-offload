@@ -1,8 +1,8 @@
 """RunPod configuration models and loaders."""
 
 import os
+from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Mapping
 
 
 class ConfigError(ValueError):
@@ -44,15 +44,22 @@ def _validate_base_url(url: str) -> str:
     return url.rstrip("/")
 
 
+DEFAULT_BASE_URL = "https://api.runpod.ai"
+DEFAULT_REQUEST_TIMEOUT_SECONDS = 30.0
+DEFAULT_VERIFY_TLS = True
+DEFAULT_POLL_INTERVAL_SECONDS = 3.0
+DEFAULT_MAX_POLL_DURATION_SECONDS = 900.0  # 15 minutes
+
+
 @dataclass(frozen=True, slots=True)
 class RunpodConfig:
     api_key: str
     endpoint_id: str
-    base_url: str = "https://api.runpod.ai"
-    request_timeout_seconds: float = 30.0
-    verify_tls: bool = True
-    poll_interval_seconds: float = 3.0
-    max_poll_duration_seconds: float = 900.0  # 15 minutes
+    base_url: str = DEFAULT_BASE_URL
+    request_timeout_seconds: float = DEFAULT_REQUEST_TIMEOUT_SECONDS
+    verify_tls: bool = DEFAULT_VERIFY_TLS
+    poll_interval_seconds: float = DEFAULT_POLL_INTERVAL_SECONDS
+    max_poll_duration_seconds: float = DEFAULT_MAX_POLL_DURATION_SECONDS
 
     @staticmethod
     def env_keys() -> dict[str, str]:
@@ -78,25 +85,25 @@ def load_runpod_config(env: Mapping[str, str] | None = None) -> RunpodConfig:
         name=keys["endpoint_id"],
     )
 
-    base_url = source_env.get(keys["base_url"], RunpodConfig.base_url)
+    base_url = source_env.get(keys["base_url"], DEFAULT_BASE_URL)
     base_url = _validate_base_url(base_url)
     request_timeout_seconds = _parse_float(
         source_env.get(keys["request_timeout_seconds"]),
-        default=RunpodConfig.request_timeout_seconds,
+        default=DEFAULT_REQUEST_TIMEOUT_SECONDS,
         name=keys["request_timeout_seconds"],
     )
     verify_tls = _parse_bool(
         source_env.get(keys["verify_tls"]),
-        default=RunpodConfig.verify_tls,
+        default=DEFAULT_VERIFY_TLS,
     )
     poll_interval_seconds = _parse_float(
         source_env.get(keys["poll_interval_seconds"]),
-        default=RunpodConfig.poll_interval_seconds,
+        default=DEFAULT_POLL_INTERVAL_SECONDS,
         name=keys["poll_interval_seconds"],
     )
     max_poll_duration_seconds = _parse_float(
         source_env.get(keys["max_poll_duration_seconds"]),
-        default=RunpodConfig.max_poll_duration_seconds,
+        default=DEFAULT_MAX_POLL_DURATION_SECONDS,
         name=keys["max_poll_duration_seconds"],
     )
 

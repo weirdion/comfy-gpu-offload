@@ -1,6 +1,6 @@
 import pytest
 
-from comfy_gpu_offload.config import ConfigError, RunpodConfig, load_runpod_config
+from comfy_gpu_offload.config import ConfigError, load_runpod_config
 
 
 def test_load_runpod_config_happy_path() -> None:

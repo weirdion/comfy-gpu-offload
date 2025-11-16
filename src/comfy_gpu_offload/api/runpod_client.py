@@ -1,8 +1,9 @@
 """Typed RunPod API client with minimal retry/backoff and polling."""
 
 import time
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
-from typing import Any, Callable, Mapping
+from typing import Any
 
 import requests
 from requests import Response
@@ -73,12 +74,21 @@ class RunpodClient:
             raise RunpodApiError("RunPod status response missing status field")
         output = data.get("output")
         error = data.get("error")
-        return JobStatus(job_id=str(data.get("id", job_id)), status=status, output=output, error=error)
+        return JobStatus(
+            job_id=str(data.get("id", job_id)),
+            status=status,
+            output=output,
+            error=error,
+        )
 
     def cancel_job(self, job_id: str) -> JobStatus:
         data = self._request_json("POST", f"/cancel/{job_id}")
         status = data.get("status")
-        return JobStatus(job_id=job_id, status=status or RunpodStatus.CANCELLED, output=data.get("output"))
+        return JobStatus(
+            job_id=job_id,
+            status=status or RunpodStatus.CANCELLED,
+            output=data.get("output"),
+        )
 
     def poll_job(
         self,
@@ -102,7 +112,9 @@ class RunpodClient:
             if status.is_terminal:
                 if status.status == RunpodStatus.COMPLETED:
                     return status
-                raise RunpodJobError(f"Job {job_id} finished with status {status.status}: {status.error}")
+                raise RunpodJobError(
+                    f"Job {job_id} finished with status {status.status}: {status.error}"
+                )
 
             now = time.monotonic()
             if now >= deadline:

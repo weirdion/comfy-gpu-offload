@@ -1,6 +1,5 @@
 from pathlib import Path
 
-import pytest
 from PIL import Image
 
 from comfy_gpu_offload.io import (
@@ -41,4 +40,3 @@ def test_image_base64_round_trip() -> None:
 
     assert decoded.size == (2, 2)
     assert decoded.mode == "RGB"
-

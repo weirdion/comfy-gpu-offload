@@ -4,7 +4,6 @@ import os
 import shutil
 import tempfile
 from pathlib import Path
-from typing import BinaryIO, Iterable
 
 
 def new_temp_dir(prefix: str = "comfy-gpu-offload-") -> Path:
@@ -39,4 +38,3 @@ def remove_path_safely(path: Path) -> None:
     except OSError:
         # Intentionally swallow errors to avoid cascading failures during cleanup.
         return
-

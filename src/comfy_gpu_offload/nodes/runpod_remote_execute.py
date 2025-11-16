@@ -1,11 +1,17 @@
 """ComfyUI node for offloading workflows to RunPod."""
 
 import json
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any, cast
 
 from comfy_gpu_offload.api import RunpodClient
 from comfy_gpu_offload.config import ConfigError, RunpodConfig, load_runpod_config
-from comfy_gpu_offload.workflow import BuildPayloadError, RunpodInputPayload, build_run_payload
+from comfy_gpu_offload.workflow import (
+    BuildPayloadError,
+    ImagePayload,
+    RunpodInputPayload,
+    build_run_payload,
+)
 
 
 def _default_client_factory(config: RunpodConfig) -> RunpodClient:
@@ -45,7 +51,11 @@ class RunPodRemoteExecute:
                 ),
                 "images_json": (
                     "STRING",
-                    {"multiline": True, "default": "[]", "placeholder": '[{"name": "init.png", "image": "...base64..."}]'},
+                    {
+                        "multiline": True,
+                        "default": "[]",
+                        "placeholder": '[{"name": "init.png", "image": "...base64..."}]',
+                    },
                 ),
                 "timeout_seconds": ("FLOAT", {"default": 900.0, "min": 1.0, "max": 3600.0}),
             },
@@ -73,7 +83,11 @@ class RunPodRemoteExecute:
 
         payload: RunpodInputPayload
         try:
-            payload = build_run_payload(workflow=workflow, images=images, params=params)
+            payload = build_run_payload(
+                workflow=workflow,
+                images=cast(list[ImagePayload], images),
+                params=params,
+            )
         except BuildPayloadError as exc:
             raise RuntimeError(f"Invalid payload: {exc}") from exc
 
@@ -111,4 +125,3 @@ class RunPodRemoteExecute:
             if not isinstance(item, dict):
                 raise RuntimeError(f"each item in {field} must be an object")
         return parsed
-
