@@ -10,7 +10,10 @@ from comfy_gpu_offload.workflow import (
     BuildPayloadError,
     ImagePayload,
     RunpodInputPayload,
+    WorkflowLoadError,
     build_run_payload,
+    ensure_payload_size,
+    load_workflow_from_path,
 )
 
 
@@ -28,6 +31,7 @@ class RunPodRemoteExecute:
     OUTPUT_NODE = True
 
     client_factory: Callable[[RunpodConfig], RunpodClient] = _default_client_factory
+    max_payload_bytes: int | None = None  # override for tests; defaults to loader default
 
     @classmethod
     def INPUT_TYPES(cls) -> dict[str, Any]:  # noqa: N802 (ComfyUI requires this name)
@@ -43,6 +47,14 @@ class RunPodRemoteExecute:
                     },
                 ),
                 "use_runpod": ("BOOLEAN", {"default": True}),
+                "workflow_path": (
+                    "STRING",
+                    {
+                        "multiline": False,
+                        "default": "",
+                        "placeholder": "/path/to/workflow_api.json (optional, overrides workflow_json)",
+                    },
+                ),
             },
             "optional": {
                 "params_json": (
@@ -68,11 +80,16 @@ class RunPodRemoteExecute:
         params_json: str = "{}",
         images_json: str = "[]",
         timeout_seconds: float | None = None,
+        workflow_path: str = "",
     ) -> tuple[str, str, str]:
         if not use_runpod:
             return ("disabled", "", "{}")
 
-        workflow = self._parse_json_mapping(workflow_json, "workflow_json")
+        if workflow_path.strip():
+            workflow = self._load_workflow_from_path(workflow_path.strip())
+        else:
+            workflow = self._parse_json_mapping(workflow_json, "workflow_json")
+
         params = self._parse_json_mapping(params_json, "params_json", allow_empty=True)
         images = self._parse_json_sequence(images_json, "images_json")
 
@@ -88,8 +105,12 @@ class RunPodRemoteExecute:
                 images=cast(list[ImagePayload], images),
                 params=params,
             )
+            if self.max_payload_bytes is not None:
+                ensure_payload_size(payload, max_bytes=self.max_payload_bytes)
         except BuildPayloadError as exc:
             raise RuntimeError(f"Invalid payload: {exc}") from exc
+        except WorkflowLoadError as exc:
+            raise RuntimeError(f"Payload too large: {exc}") from exc
 
         client = self.client_factory(config)
 
@@ -98,6 +119,23 @@ class RunPodRemoteExecute:
 
         output_json = json.dumps(status.output or {})
         return (status.status, job_id, output_json)
+
+    def _load_workflow_from_path(self, path_str: str) -> dict[str, Any]:
+        try:
+            path = Path(path_str)
+        except OSError as exc:
+            raise RuntimeError(f"Invalid workflow_path: {exc}") from exc
+
+        try:
+            workflow = load_workflow_from_path(path)
+        except Exception as exc:
+            raise RuntimeError(f"Failed to load workflow from path: {exc}") from exc
+
+        # Guard payload size if configured
+        max_bytes = self.max_payload_bytes
+        if max_bytes is not None:
+            ensure_payload_size({"workflow": workflow}, max_bytes=max_bytes)
+        return workflow
 
     @staticmethod
     def _parse_json_mapping(value: str, field: str, *, allow_empty: bool = False) -> dict[str, Any]:
