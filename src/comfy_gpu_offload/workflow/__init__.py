@@ -11,6 +11,7 @@ from .loader import (
     ensure_payload_size,
     load_workflow_from_path,
 )
+from .schema import validate_workflow_schema
 
 __all__ = [
     "BuildPayloadError",
@@ -20,4 +21,5 @@ __all__ = [
     "WorkflowLoadError",
     "load_workflow_from_path",
     "ensure_payload_size",
+    "validate_workflow_schema",
 ]

@@ -35,6 +35,7 @@ def test_node_happy_path(monkeypatch: pytest.MonkeyPatch) -> None:
         return cast(RunpodClient, fake_client)
 
     node.client_factory = factory
+    node.max_payload_bytes = 1_000_000
     monkeypatch.setenv("RUNPOD_API_KEY", "k")
     monkeypatch.setenv("RUNPOD_ENDPOINT_ID", "e")
 

@@ -21,3 +21,23 @@
     - ✅ MIT license present.
     - ☐ Add versioning/release notes (CHANGELOG.md) and ComfyUI Manager metadata.
     - ☐ Confirm package metadata (name/description) and repo docs for submission.
+
+## Feature gaps to address (from vision/data_flow)
+
+- Workflow capture/payloads:
+  - ☐ Auto-capture or helper for exporting current ComfyUI graph (vs manual JSON).
+  - ✅ Load workflow from path with size guard; payload size check option.
+  - ☐ Validate workflow/images/params schema beyond basic type checks; additional guardrails vs RunPod limits.
+- Progress & UX:
+  - ☐ Surface progress updates to ComfyUI UI; add cancel toggle/button wiring to client cancel.
+  - ☐ Map node cancellation/timeouts to poll loop cancellation.
+- Artifacts/media:
+  - ☐ Strategy for large outputs (video/large images): streamed download or URL handling; integrate outputs back into ComfyUI types.
+- Error handling/logging:
+  - ☐ User-friendly error messages with optional debug logs (no prompts/secrets); add structured logger with redaction.
+  - ☐ Retry/backoff on transient HTTP errors where safe.
+- Configuration/DX:
+  - ☐ Optional `.env` loading helper; tighter numeric range validation for timeouts/poll intervals.
+- Tests/CI:
+  - ☐ Add integration/smoke test: node → payload → mocked RunPod responses.
+  - ☐ Set up CI to run `make checks`.

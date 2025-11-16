@@ -14,6 +14,7 @@ from comfy_gpu_offload.workflow import (
     build_run_payload,
     ensure_payload_size,
     load_workflow_from_path,
+    validate_workflow_schema,
 )
 
 
@@ -57,6 +58,16 @@ class RunPodRemoteExecute:
                 ),
             },
             "optional": {
+                "max_payload_bytes": (
+                    "INT",
+                    {
+                        "default": 9_500_000,
+                        "min": 100_000,
+                        "max": 20_000_000,
+                        "step": 50_000,
+                        "tooltip": "Guard payload size vs RunPod /run limits (~10MB).",
+                    },
+                ),
                 "params_json": (
                     "STRING",
                     {"multiline": True, "default": "{}", "placeholder": '{"seed": 1234}'},
@@ -81,6 +92,7 @@ class RunPodRemoteExecute:
         images_json: str = "[]",
         timeout_seconds: float | None = None,
         workflow_path: str = "",
+        max_payload_bytes: int | None = 9_500_000,
     ) -> tuple[str, str, str]:
         if not use_runpod:
             return ("disabled", "", "{}")
@@ -89,6 +101,10 @@ class RunPodRemoteExecute:
             workflow = self._load_workflow_from_path(workflow_path.strip())
         else:
             workflow = self._parse_json_mapping(workflow_json, "workflow_json")
+        try:
+            validate_workflow_schema(workflow)
+        except ValueError as exc:
+            raise RuntimeError(f"Invalid workflow schema: {exc}") from exc
 
         params = self._parse_json_mapping(params_json, "params_json", allow_empty=True)
         images = self._parse_json_sequence(images_json, "images_json")
@@ -105,8 +121,9 @@ class RunPodRemoteExecute:
                 images=cast(list[ImagePayload], images),
                 params=params,
             )
-            if self.max_payload_bytes is not None:
-                ensure_payload_size(payload, max_bytes=self.max_payload_bytes)
+            limit = max_payload_bytes if max_payload_bytes else self.max_payload_bytes
+            if limit is not None:
+                ensure_payload_size(payload, max_bytes=limit)
         except BuildPayloadError as exc:
             raise RuntimeError(f"Invalid payload: {exc}") from exc
         except WorkflowLoadError as exc:
