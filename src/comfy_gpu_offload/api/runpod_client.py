@@ -15,6 +15,10 @@ class RunpodApiError(RuntimeError):
     """Raised when the RunPod API returns an error or an unexpected response."""
 
 
+class RunpodCancelledError(RunpodApiError):
+    """Raised when polling is cancelled by the caller."""
+
+
 class RunpodTimeoutError(RunpodApiError):
     """Raised when polling exceeds the configured timeout."""
 
@@ -82,6 +86,8 @@ class RunpodClient:
         *,
         poll_interval_seconds: float | None = None,
         timeout_seconds: float | None = None,
+        on_progress: Callable[[JobStatus], None] | None = None,
+        should_continue: Callable[[], bool] | None = None,
     ) -> JobStatus:
         """Poll until a job reaches a terminal status or times out."""
         poll_interval = poll_interval_seconds or self._config.poll_interval_seconds
@@ -90,6 +96,9 @@ class RunpodClient:
 
         while True:
             status = self.get_job_status(job_id)
+            if on_progress:
+                on_progress(status)
+
             if status.is_terminal:
                 if status.status == RunpodStatus.COMPLETED:
                     return status
@@ -98,6 +107,9 @@ class RunpodClient:
             now = time.monotonic()
             if now >= deadline:
                 raise RunpodTimeoutError(f"Polling timeout exceeded for job {job_id}")
+
+            if should_continue is not None and not should_continue():
+                raise RunpodCancelledError(f"Polling cancelled by caller for job {job_id}")
 
             remaining = deadline - now
             sleep_for = min(poll_interval, max(0.0, remaining))

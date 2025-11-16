@@ -2,16 +2,18 @@
 
 from .runpod_client import (
     RunpodApiError,
+    RunpodCancelledError,
     RunpodClient,
     RunpodJobError,
-    RunpodTimeoutError,
     RunpodStatus,
+    RunpodTimeoutError,
 )
 
 __all__ = [
     "RunpodApiError",
+    "RunpodCancelledError",
     "RunpodClient",
     "RunpodJobError",
-    "RunpodTimeoutError",
     "RunpodStatus",
+    "RunpodTimeoutError",
 ]

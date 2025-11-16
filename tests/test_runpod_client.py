@@ -4,6 +4,7 @@ import pytest
 
 from comfy_gpu_offload.api import (
     RunpodApiError,
+    RunpodCancelledError,
     RunpodClient,
     RunpodJobError,
     RunpodStatus,
@@ -95,6 +96,36 @@ def test_poll_job_times_out(monkeypatch: pytest.MonkeyPatch) -> None:
 
     with pytest.raises(RunpodTimeoutError):
         client.poll_job("job-123", poll_interval_seconds=0.0, timeout_seconds=0.5)
+
+
+def test_poll_job_reports_progress_and_can_cancel(monkeypatch: pytest.MonkeyPatch) -> None:
+    client, _ = make_client(
+        [
+            FakeResponse(200, {"id": "job-123", "status": RunpodStatus.IN_PROGRESS}),
+        ]
+    )
+    seen_statuses: list[str] = []
+
+    def on_progress(status: Any) -> None:
+        seen_statuses.append(status.status)
+
+    def should_continue() -> bool:
+        return False
+
+    times = iter([0.0, 0.1])
+    monkeypatch.setattr("time.monotonic", lambda: next(times))
+    monkeypatch.setattr("time.sleep", lambda _seconds: None)
+
+    with pytest.raises(RunpodCancelledError):
+        client.poll_job(
+            "job-123",
+            poll_interval_seconds=0.0,
+            timeout_seconds=1.0,
+            on_progress=on_progress,
+            should_continue=should_continue,
+        )
+
+    assert seen_statuses == [RunpodStatus.IN_PROGRESS]
 
 
 def test_http_error_raises_api_error() -> None:
